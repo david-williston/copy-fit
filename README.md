@@ -175,15 +175,97 @@ historical-data permission, Health Connect silently truncates every read to the
 last 30 days. The Diagnostics card says outright whether that permission was
 granted and flags a result that looks truncated.
 
-## Layout
+## Architecture
+
+Four layers, with dependencies pointing one way only. `exporter.dart` never
+touches the plugin, `health_service.dart` never builds JSON, and `metrics.dart`
+depends on nothing but the `HealthDataType` enum.
+
+```mermaid
+flowchart TB
+    subgraph UI["UI"]
+        main["main.dart<br/>entry and theme"]
+        home["home_page.dart<br/>one screen, setState"]
+    end
+
+    subgraph Boundary["I/O boundary"]
+        service["health_service.dart<br/>the only importer of the health plugin"]
+    end
+
+    subgraph Pure["Pure logic, no I/O"]
+        exporter["exporter.dart<br/>points to JSON"]
+        metrics["metrics.dart<br/>const metric catalog"]
+    end
+
+    hc[("Health Connect")]
+    out["Clipboard or share sheet"]
+
+    main --> home
+    home -->|"1. ensurePermissions"| service
+    home -->|"2. read"| service
+    service <--> hc
+    service -->|"ReadReport"| home
+    home -->|"3. build"| exporter
+    exporter -->|"ExportResult"| home
+    home -->|"4. copy"| out
+
+    metrics -.-> home
+    metrics -.-> service
+    metrics -.-> exporter
+```
+
+Solid arrows are calls and returns; dotted arrows show the metric catalog being
+read as data. Nothing in **Pure logic** depends on anything above it, which is
+what makes the exporter testable without a device.
 
 | Path | What it is |
 | --- | --- |
 | `lib/metrics.dart` | The catalog of exportable metrics and how each aggregates |
-| `lib/exporter.dart` | Turns Health Connect points into the JSON document |
-| `lib/health_service.dart` | Permission handling and reads, wrapping the `health` plugin |
+| `lib/health_service.dart` | The only file that imports `health`: permissions, reads, diagnostics |
+| `lib/exporter.dart` | Pure transformation of Health Connect points into the JSON document |
 | `lib/home_page.dart` | The single-screen UI |
+| `lib/main.dart` | App entry and theme |
 | `test/exporter_test.dart` | Aggregation rules — the part worth testing |
+| `test/widget_test.dart` | Boot, permission-warning states, settings persistence |
 
-To add a metric, add an entry to `kMetrics` and the matching
-`android.permission.health.READ_*` line to `android/app/src/main/AndroidManifest.xml`.
+### The catalog is data
+
+`kMetrics` is a `const` list binding a JSON key, a label, a group, a set of
+Health Connect types and an `Agg` kind. The picker, the reads and the
+aggregation all derive from that one list, so there is no metric-specific
+branching anywhere else. The mapping is deliberately one-to-many: `sleep` owns
+eight Health Connect types, while blood pressure is two metrics over one record.
+
+**To add a metric**, add an entry to `kMetrics` *and* the matching
+`android.permission.health.READ_*` line to
+`android/app/src/main/AndroidManifest.xml`. Nothing enforces that pairing — a
+metric without its permission fails silently at runtime, though the Diagnostics
+card will show it as denied rather than leaving you guessing.
+
+### The exporter is pure
+
+`Exporter(points, metrics, start, end, format) -> ExportResult` does no I/O and
+touches no widgets. That is the most consequential choice here: all the awkward
+logic lives in one testable place, so midnight-crossing nights, nap separation
+and orphan stages are covered without a device attached.
+
+### Two deliberate breaks in the pipeline
+
+**Sleep bypasses per-point bucketing.** Every other metric files each point into
+a day on its own. A sleep stage cannot be — it only means something relative to
+its session. So sleep points are diverted into `_buildSleep`, which collects
+sessions, attaches stages by time containment, and files each session under the
+date it ended. It is the most intricate function in the app and the one to read
+first when sleep output looks wrong.
+
+**Reads return diagnostics, not just points.** Denied, unsupported, absent and
+30-day-capped all produce zero points and are indistinguishable from outside.
+So `read()` returns a `ReadReport`, where every type carries its own count,
+permission state, dates covered, source and error, and `TypeDiagnostic.verdict`
+renders that as a sentence.
+
+### Deliberate omissions
+
+No state-management package: one screen and one linear flow, so `setState` is
+less code than the alternative. No caching layer either — every export re-reads
+Health Connect, which is why a long multi-metric read takes several seconds.
