@@ -3,8 +3,6 @@ title: "Install"
 description: "Copy Fit is sideload-only. Here is how to get it onto your phone."
 ---
 
-Copy Fit isn't on the Play Store. You install it yourself from an APK file.
-
 ## What you need
 
 - An Android phone running **Android 9 or later**, with a 64-bit processor —

@@ -54,17 +54,30 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-            <!-- Health Connect opens this when the user taps "read the app's rationale". -->
+        </activity>
+
+        <!-- Opens the privacy policy on the website when Health Connect asks for
+             it. Invisible: it hands the URL to the browser and finishes at once,
+             which is what Theme.NoDisplay requires. Must be declared before the
+             activity-alias below that targets it. -->
+        <activity
+            android:name=".PrivacyPolicyActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:taskAffinity=""
+            android:theme="@android:style/Theme.NoDisplay">
+            <!-- Health Connect before Android 14 uses this to show the policy. -->
             <intent-filter>
                 <action android:name="androidx.health.ACTION_SHOW_PERMISSIONS_RATIONALE" />
             </intent-filter>
         </activity>
 
-        <!-- Health Connect (Android 14+) links here from the permissions screen. -->
+        <!-- Health Connect on Android 14+ links here from the permissions screen. -->
         <activity-alias
             android:name="ViewPermissionUsageActivity"
             android:exported="true"
-            android:targetActivity=".MainActivity"
+            android:targetActivity=".PrivacyPolicyActivity"
             android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />

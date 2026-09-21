@@ -197,6 +197,12 @@ bare filenames.
 The logo and favicons in `website/static/` come from `tool/make_icon.py`, the
 same script as the app icon, so regenerating the icon updates the site too.
 
+The app links to the site. When someone taps *Read privacy policy* on Health
+Connect's permission screen, Android opens `PrivacyPolicyActivity`, which hands
+the privacy page's URL to the browser and closes. The browser does the fetching,
+so the app still needs no internet permission. That URL is hard-coded in
+`PrivacyPolicyActivity.kt`, so if the site moves, change it there too.
+
 ## Where settings live
 
 Range, format, the recording-app toggle and the metric selection are stored with

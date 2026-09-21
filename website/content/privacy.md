@@ -3,8 +3,6 @@ title: "Privacy"
 description: "Copy Fit cannot connect to the internet. Your health data leaves your phone only when you move it."
 ---
 
-**Your health data never leaves your phone unless you move it yourself.**
-
 ## It cannot connect to the internet
 
 Copy Fit doesn't request Android's internet permission, so Android itself stops
