@@ -280,8 +280,9 @@ and is reassembled at the far end.
 Some structure does not survive the trip:
 
 - **Nesting is gone.** A sleep session's stages arrive as separate top-level
-  points rather than nested inside their session. This is why `_buildSleep`
-  has to put the night back together.
+  points rather than nested inside their session, so `_buildSleep` has to put
+  the night back together — though the uuid below makes that exact rather than
+  a guess.
 - **Blood pressure is split.** One `BloodPressureRecord` becomes two
   independent streams, systolic and diastolic, paired only by timestamp.
 - **`sourceId` is always empty** and **`deviceModel` is always null** on
@@ -292,7 +293,9 @@ Some structure does not survive the trip:
 One thing does survive, and it matters: **every stage carries its parent
 session's `uuid`**. The Kotlin half passes the session's metadata down to each
 stage, so the parent-child link is preserved as what amounts to a foreign key
-even though the nesting is not.
+even though the nesting is not. `_buildSleep` matches on that uuid, falling
+back to the stage's interval only when a stage arrives without its session —
+which happens when the session began before the queried window.
 
 ### Two deliberate breaks in the pipeline
 

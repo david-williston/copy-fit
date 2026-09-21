@@ -11,9 +11,13 @@ HealthDataPoint point(
   num value,
   DateTime from, [
   DateTime? to,
+  String? uuid,
+  String source = 'Test Tracker',
 ]) =>
     HealthDataPoint(
-      uuid: '$type-$from-$value',
+      // Health Connect gives a sleep stage its parent session's uuid, so tests
+      // that care about parentage pass the two the same one.
+      uuid: uuid ?? '$type-$from-$value',
       value: NumericHealthValue(numericValue: value),
       type: type,
       unit: unit,
@@ -22,7 +26,7 @@ HealthDataPoint point(
       sourcePlatform: HealthPlatformType.googleHealthConnect,
       sourceDeviceId: 'device',
       sourceId: 'com.example.tracker',
-      sourceName: 'Test Tracker',
+      sourceName: source,
     );
 
 HealthDataPoint workout(
@@ -201,6 +205,62 @@ void main() {
     expect(main.containsKey('rem_min'), isFalse, reason: "the nap's REM is not the night's");
     expect(nap['rem_min'], 60);
     expect(nap.containsKey('deep_min'), isFalse);
+  });
+
+  test('overlapping sessions keep their own stages', () {
+    // Two sources both logging the same night, one session nested inside the
+    // other. Matching by interval would hand the inner session's stages to the
+    // outer one, because the outer contains them too.
+    final outerStart = DateTime(2026, 9, 18, 23);
+    final outerEnd = DateTime(2026, 9, 19, 6);
+    final innerStart = DateTime(2026, 9, 18, 23, 30);
+    final innerEnd = DateTime(2026, 9, 19, 5, 30);
+
+    final doc = run([
+      point(HealthDataType.SLEEP_SESSION, HealthDataUnit.MINUTE, 0,
+          outerStart, outerEnd, 'session-outer', 'Fitbit'),
+      point(HealthDataType.SLEEP_DEEP, HealthDataUnit.MINUTE, 0,
+          outerStart, outerStart.add(const Duration(minutes: 90)),
+          'session-outer', 'Fitbit'),
+      point(HealthDataType.SLEEP_SESSION, HealthDataUnit.MINUTE, 0,
+          innerStart, innerEnd, 'session-inner', 'Samsung Health'),
+      point(HealthDataType.SLEEP_REM, HealthDataUnit.MINUTE, 0,
+          DateTime(2026, 9, 19), DateTime(2026, 9, 19, 1),
+          'session-inner', 'Samsung Health'),
+    ], [sleep]);
+
+    final s = doc['days'][0]['sleep'] as Map<String, dynamic>;
+    expect(s['session_count'], 2);
+
+    final main = s['main_sleep'] as Map<String, dynamic>;
+    final nap = (s['naps'] as List).single as Map<String, dynamic>;
+
+    expect(main['source'], 'Fitbit', reason: 'the longer session is the main one');
+    expect(main['deep_min'], 90);
+    expect(main.containsKey('rem_min'), isFalse,
+        reason: "the inner session's REM must not be absorbed by the outer one");
+
+    expect(nap['source'], 'Samsung Health');
+    expect(nap['rem_min'], 60);
+    expect(nap.containsKey('deep_min'), isFalse);
+  });
+
+  test('a stage whose session is missing falls back to its interval', () {
+    // Health Connect can return a stage whose session began before the
+    // queried window, leaving no uuid to match against.
+    final bed = DateTime(2026, 9, 18, 23);
+    final wake = DateTime(2026, 9, 19, 7);
+
+    final doc = run([
+      point(HealthDataType.SLEEP_SESSION, HealthDataUnit.MINUTE, 0, bed, wake,
+          'session-1'),
+      point(HealthDataType.SLEEP_DEEP, HealthDataUnit.MINUTE, 0, bed,
+          bed.add(const Duration(minutes: 60)), 'some-other-uuid'),
+    ], [sleep]);
+
+    final s = doc['days'][0]['sleep'] as Map<String, dynamic>;
+    expect((s['main_sleep'] as Map)['deep_min'], 60);
+    expect(s.containsKey('unassigned_stages'), isFalse);
   });
 
   test('a session with no stage breakdown falls back to session length', () {

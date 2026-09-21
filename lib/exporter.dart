@@ -299,6 +299,22 @@ class Exporter {
   /// Some sources round stage edges a little past the session boundary.
   static const _stageSlop = Duration(minutes: 2);
 
+  /// Index of the session whose interval contains [stage], or -1. Only used
+  /// when a stage arrives without a matching session uuid.
+  static int _sessionContaining(
+    HealthDataPoint stage,
+    List<HealthDataPoint> sessions,
+  ) {
+    for (var i = 0; i < sessions.length; i++) {
+      final s = sessions[i];
+      if (!stage.dateFrom.isBefore(s.dateFrom.subtract(_stageSlop)) &&
+          !stage.dateTo.isAfter(s.dateTo.add(_stageSlop))) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
   /// Resolves raw sleep points into one object per wake date.
   ///
   /// Sessions are the unit that matters. Each stage is attached to the session
@@ -316,19 +332,22 @@ class Exporter {
         if (p.type != HealthDataType.SLEEP_SESSION) p,
     ];
 
+    // Each stage carries its parent session's uuid, so the real parentage
+    // survives the trip from Health Connect and does not need to be guessed.
+    final sessionByUuid = <String, int>{
+      for (var i = 0; i < sessions.length; i++) sessions[i].uuid: i,
+    };
+
     final stagesFor = <int, List<HealthDataPoint>>{};
     final orphans = <HealthDataPoint>[];
 
     for (final stage in stages) {
-      var owner = -1;
-      for (var i = 0; i < sessions.length; i++) {
-        final s = sessions[i];
-        if (!stage.dateFrom.isBefore(s.dateFrom.subtract(_stageSlop)) &&
-            !stage.dateTo.isAfter(s.dateTo.add(_stageSlop))) {
-          owner = i;
-          break;
-        }
-      }
+      var owner = sessionByUuid[stage.uuid] ?? -1;
+
+      // A stage can outlive its session in the results when the session began
+      // before the queried window. Fall back to the interval in that case.
+      if (owner < 0) owner = _sessionContaining(stage, sessions);
+
       if (owner >= 0) {
         stagesFor.putIfAbsent(owner, () => []).add(stage);
       } else {
