@@ -3,6 +3,26 @@
 Personal, sideload-only. Versions are milestones for my own reference rather
 than published releases.
 
+## 1.2.1 — 2026-09-21
+
+### Fixed
+
+- **Health Connect's "Read privacy policy" link now opens the privacy policy.**
+  It used to open the app itself, since there was no policy to link to. It now
+  opens the privacy page on the website in your browser. The browser does the
+  fetching, so the app still requests no internet permission.
+
+### Outside the app
+
+Not part of the APK, but new in the repository since 1.2.0:
+
+- **A website**, at https://david-williston.github.io/copy-fit/, explaining how
+  the app works, how to install it, and its privacy policy. It shows the latest
+  release and the commit it was built from, and republishes itself whenever a
+  release is published.
+- **`tool/make_icon.py`**, which generates the launcher icon, the README logo
+  and the website's images, and refuses any design a launcher would crop.
+
 ## 1.2.0 — 2026-09-20
 
 ### Added
