@@ -3,6 +3,34 @@
 Personal, sideload-only. Versions are milestones for my own reference rather
 than published releases.
 
+## 1.2.0 — 2026-09-20
+
+### Added
+
+- **24-hour and 3-day ranges**, for exporting to a coach every morning. The
+  last 24 hours is now the default: exported in the morning it returns last
+  night's sleep and nothing older, so each day's paste adds only what is new.
+- **A launcher icon and logo**, replacing the default Flutter icon: two
+  overlapping sheets, the copy symbol, with a pulse line on the front one.
+
+### Changed
+
+- The 24-hour range is **rolling**, counting back from the moment of export,
+  while every other range still covers whole calendar days. Because a rolling
+  window starts mid-day, its export reports the exact `from` and `to` instead
+  of dates, and notes that the edge days' totals may be partial. Sleep is
+  unaffected: a session comes back whole or not at all.
+- A range saved by an earlier version is carried over. The new default only
+  applies to fresh installs, so an existing install keeps its last choice
+  until a different range is picked.
+
+### Fixed
+
+- Calendar ranges could start an hour off midnight when they crossed a
+  daylight-saving change, because the window was built by subtracting
+  `Duration(days:)`. They are now built from dates. This never affected
+  timezones that keep one offset all year.
+
 ## 1.1.1 — 2026-09-20
 
 ### Fixed
