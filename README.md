@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/logo.png" width="128" alt="Copy Fit logo"></p>
+
 # Copy Fit
 
 A personal Android app that pulls your health data out of **Health Connect** and
@@ -326,3 +328,19 @@ renders that as a sentence.
 No state-management package: one screen and one linear flow, so `setState` is
 less code than the alternative. No caching layer either — every export re-reads
 Health Connect, which is why a long multi-metric read takes several seconds.
+
+### Launcher icon
+
+The icon is an adaptive icon, which every supported device uses (minSdk 28).
+The launcher masks it to its own shape — a circle on a Pixel — so the mark is
+sized to sit inside the 66dp safe zone of the 108dp canvas, reaching about 27dp
+from centre. Anything beyond that zone is clipped by some launchers, which is
+easy to miss: a full-bleed preview can look fine while the masked icon on the
+phone loses a corner.
+
+| Resource | Role |
+| --- | --- |
+| `mipmap-anydpi-v26/ic_launcher.xml` | The adaptive icon: background plus foreground |
+| `drawable/ic_launcher_background.xml` | The blue gradient, as a drawable so it is crisp at every density |
+| `mipmap-*/ic_launcher_foreground.png` | The mark on transparency, at five densities |
+| `mipmap-*/ic_launcher.png` | Fallback with the background baked in; unused on any supported device, since the adaptive icon takes precedence from API 26 |
