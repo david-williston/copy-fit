@@ -360,6 +360,18 @@ from centre. Anything beyond that zone is clipped by some launchers, which is
 easy to miss: a full-bleed preview can look fine while the masked icon on the
 phone loses a corner.
 
+Every icon file is generated, never hand-edited:
+
+```sh
+python3 tool/make_icon.py     # needs Pillow
+```
+
+It writes all ten launcher PNGs and `docs/logo.png`, then measures how far the
+mark reaches and **exits non-zero if it leaves the safe zone**. The one thing it
+does not generate is the background gradient, which is
+`drawable/ic_launcher_background.xml`; its colours must match `BLUE_HI` and
+`BLUE_LO` in the script.
+
 | Resource | Role |
 | --- | --- |
 | `mipmap-anydpi-v26/ic_launcher.xml` | The adaptive icon: background plus foreground |
