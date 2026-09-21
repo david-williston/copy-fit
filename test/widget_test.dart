@@ -16,8 +16,8 @@ void main() {
     PackageInfo.setMockInitialValues(
       appName: 'Copy Fit',
       packageName: 'com.davidwilliston.copy_fit',
-      version: '1.1.0',
-      buildNumber: '2',
+      version: '1.1.1',
+      buildNumber: '3',
       buildSignature: '',
     );
     // Stand in for Health Connect: report the SDK as available (native value 3)
@@ -46,7 +46,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Copy Fit'), findsOneWidget);
-    expect(find.text('1.1.0'), findsOneWidget,
+    expect(find.text('1.1.1'), findsOneWidget,
         reason: 'the version is shown beside the title');
     expect(find.text('Health Connect is ready.'), findsOneWidget);
     expect(find.text('30 days'), findsOneWidget);
