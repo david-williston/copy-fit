@@ -1,6 +1,7 @@
 import 'package:copy_fit/main.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -12,6 +13,13 @@ void main() {
   setUp(() {
     historyAuthorized = false;
     SharedPreferences.setMockInitialValues({});
+    PackageInfo.setMockInitialValues(
+      appName: 'Copy Fit',
+      packageName: 'com.davidwilliston.copy_fit',
+      version: '1.1.0',
+      buildNumber: '2',
+      buildSignature: '',
+    );
     // Stand in for Health Connect: report the SDK as available (native value 3)
     // so the UI reaches its normal ready state.
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -38,6 +46,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Copy Fit'), findsOneWidget);
+    expect(find.text('1.1.0'), findsOneWidget,
+        reason: 'the version is shown beside the title');
     expect(find.text('Health Connect is ready.'), findsOneWidget);
     expect(find.text('30 days'), findsOneWidget);
     expect(find.text('Daily summary'), findsOneWidget);

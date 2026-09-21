@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -31,6 +32,7 @@ class _HomePageState extends State<HomePage> {
   bool _includeSources = true;
   bool _historyGranted = false;
   DateTime? _lastStart;
+  String _version = '';
 
   bool _busy = false;
   String _busyLabel = '';
@@ -42,7 +44,20 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _restore();
+    _loadVersion();
     _refreshAvailability();
+  }
+
+  /// Read from the platform rather than hard-coded, so the number shown can
+  /// never drift from the one in pubspec.yaml.
+  Future<void> _loadVersion() async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (!mounted) return;
+      setState(() => _version = info.version);
+    } catch (_) {
+      // Cosmetic only: a platform that cannot report it simply shows nothing.
+    }
   }
 
   Future<void> _restore() async {
@@ -201,7 +216,22 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Copy Fit'),
+        title: Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            const Text('Copy Fit'),
+            if (_version.isNotEmpty) ...[
+              const SizedBox(width: 8),
+              Text(
+                _version,
+                style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ],
+        ),
         actions: [
           IconButton(
             tooltip: 'Recheck Health Connect',
