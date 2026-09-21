@@ -201,6 +201,15 @@ commit from the checkout, so neither is edited by hand or can drift. It also
 runs when a release is published, so a new version appears on the site without
 any change to `website/`. Under `hugo server` both are simply absent.
 
+That release trigger depends on a repository setting that lives outside the
+code. A deploy started by a release runs as the release's **tag**, and GitHub
+Pages' `github-pages` environment accepts deploys only from refs it allows. When
+Pages is enabled it allows just `main`, which rejects every release deploy with
+*Tag "v1.2.1" is not allowed to deploy to github-pages*. So the environment
+also allows tags matching `v*` (**Settings → Environments → github-pages →
+Deployment branches and tags**). Only release-style tags qualify, so an
+arbitrary tag still cannot publish the site.
+
 The version line needs an override of PaperMod's profile template, at
 `website/layouts/_partials/index_profile.html`. It is a copy of the theme's file
 with one marked addition, so **when updating the PaperMod submodule, diff it
