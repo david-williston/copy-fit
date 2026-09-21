@@ -249,6 +249,51 @@ touches no widgets. That is the most consequential choice here: all the awkward
 logic lives in one testable place, so midnight-crossing nights, nap separation
 and orphan stages are covered without a device attached.
 
+### Crossing the bridge
+
+Flutter is Dart; Health Connect is an Android API. The `health` plugin bridges
+them, with a Dart half your code calls and a Kotlin half that does the talking.
+Messages pass between them over a channel, one request out and one reply back,
+once per data type.
+
+Only simple things fit through that channel: text, numbers and lists. Health
+Connect hands the Kotlin half a rich object — a `SleepSessionRecord` with typed
+timestamps and nested stages — which cannot travel as-is. So the Kotlin half
+takes it apart:
+
+```
+SleepSessionRecord               {
+  startTime : Instant     ──►      "date_from"   : 1758240000000,
+  endTime   : Instant     ──►      "date_to"     : 1758268800000,
+  metadata  : Metadata    ──►      "source_name" : "com.fitbit.FitbitMobile",
+  stages    : List<Stage> ──►      "uuid"        : "a1b2c3..."
+}                                }
+```
+
+Dates become milliseconds, everything else becomes text or numbers in a
+labelled map, and the Dart half rebuilds that into a `HealthDataPoint`. It is
+flat-pack furniture: you cannot post the assembled thing, so it ships as parts
+and is reassembled at the far end.
+
+### What the flattening costs
+
+Some structure does not survive the trip:
+
+- **Nesting is gone.** A sleep session's stages arrive as separate top-level
+  points rather than nested inside their session. This is why `_buildSleep`
+  has to put the night back together.
+- **Blood pressure is split.** One `BloodPressureRecord` becomes two
+  independent streams, systolic and diastolic, paired only by timestamp.
+- **`sourceId` is always empty** and **`deviceModel` is always null** on
+  Android; both are iOS-only fields.
+- **Timestamps lose precision**, from nanoseconds to milliseconds. Irrelevant
+  at the resolution anything here is measured in.
+
+One thing does survive, and it matters: **every stage carries its parent
+session's `uuid`**. The Kotlin half passes the session's metadata down to each
+stage, so the parent-child link is preserved as what amounts to a foreign key
+even though the nesting is not.
+
 ### Two deliberate breaks in the pipeline
 
 **Sleep bypasses per-point bucketing.** Every other metric files each point into
