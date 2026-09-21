@@ -11,6 +11,11 @@ Android only. Sideload only. Not built for the Play Store.
 2. Reads back the range you choose (7 days to 1 year).
 3. Formats the result as JSON and copies it to the clipboard.
 
+**Sleep is the only metric selected by default.** Everything else — steps,
+heart rate, workouts, body measurements, vitals, intake — is there but opt-in,
+because a coaching conversation is usually about one thing at a time and every
+extra metric costs tokens.
+
 Nothing leaves the phone. There is no network code and no analytics — the only
 way data moves is the clipboard or the share sheet, both of which you trigger.
 
@@ -103,10 +108,11 @@ flutter pub get
 flutter test
 ```
 
-Day to day, run it from VS Code: the `copy-fit` config in `.vscode/launch.json`
-launches in debug mode on the attached phone (F5). Debug builds print the
-per-type read report to the Debug Console, which is easier to read and copy than
-the on-screen Diagnostics card.
+Day to day, run it from VS Code: press F5 with the phone attached. The Dart
+extension detects a Flutter project and launches in debug mode without needing
+a launch configuration — `.vscode/` is deliberately untracked, so nothing is
+checked in. Debug builds print the per-type read report to the Debug Console,
+which is easier to read and copy than the on-screen Diagnostics card.
 
 Hot reload does not re-read saved preferences, so after changing the default
 metric set use hot **restart**.
@@ -126,6 +132,9 @@ Only needed if you want the app on the phone without a cable:
 flutter build apk --release --split-per-abi
 adb install -r build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
 ```
+
+The app bar shows the running version, read from `pubspec.yaml` at runtime, so
+you can tell which build is on the phone without checking `adb`.
 
 The release build is signed with the local **debug** keystore, which is fine for
 sideloading. The catch: if that keystore is ever regenerated, a new APK will not
