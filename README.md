@@ -194,6 +194,20 @@ must be relative. A path with a leading slash works under `hugo server` and
 verbatim, and favicons resolve correctly only while they keep PaperMod's default
 bare filenames.
 
+The home page shows the **latest release** beside the Download button, and every
+page's footer shows the **commit the site was built from**. The workflow fills
+both in at deploy time, the version from the latest GitHub release and the
+commit from the checkout, so neither is edited by hand or can drift. It also
+runs when a release is published, so a new version appears on the site without
+any change to `website/`. Under `hugo server` both are simply absent.
+
+The version line needs an override of PaperMod's profile template, at
+`website/layouts/_partials/index_profile.html`. It is a copy of the theme's file
+with one marked addition, so **when updating the PaperMod submodule, diff it
+against the new original** and carry the addition across. Otherwise a theme
+update can quietly drop the version line, or leave the copy behind upstream
+fixes.
+
 The logo and favicons in `website/static/` come from `tool/make_icon.py`, the
 same script as the app icon, so regenerating the icon updates the site too.
 

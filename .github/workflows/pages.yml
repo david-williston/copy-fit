@@ -6,6 +6,10 @@ on:
     paths:
       - "website/**"
       - ".github/workflows/pages.yml"
+  # The site shows the latest release, so it has to rebuild when one is
+  # published, even though nothing under website/ changed.
+  release:
+    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -24,7 +28,23 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          # A release event would otherwise check out the tag's commit, which can
+          # predate the latest site or the website/ folder altogether.
+          ref: main
           submodules: recursive   # PaperMod is a submodule
+
+      - name: Look up the release and commit being published
+        id: meta
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Empty if there are no releases yet; the site then omits the line.
+          tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName 2>/dev/null || true)
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+          # The commit actually checked out, not GITHUB_SHA, which on a release
+          # event is the tag's commit rather than what is being built.
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set up Hugo
         uses: peaceiris/actions-hugo@v3
@@ -38,7 +58,12 @@ jobs:
 
       # Take the base URL from Pages rather than hugo.toml, so a custom domain
       # added later needs no config change.
+      # Hugo reads HUGO_PARAMS_* as site params; the underscore after FOOTER
+      # nests, so this sets params.footer.text.
       - name: Build
+        env:
+          HUGO_PARAMS_APPVERSION: ${{ steps.meta.outputs.version }}
+          HUGO_PARAMS_FOOTER_TEXT: "Site built from [${{ steps.meta.outputs.short }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ steps.meta.outputs.sha }})"
         run: hugo --source website --minify --baseURL "${{ steps.pages.outputs.base_url }}/"
 
       - uses: actions/upload-pages-artifact@v5

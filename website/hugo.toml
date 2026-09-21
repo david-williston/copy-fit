@@ -11,6 +11,10 @@ disableKinds = ["taxonomy", "term"]
 
 [params]
   description = "Copy your Android health data as JSON, ready to paste into an AI coach."
+  repo = "https://github.com/david-williston/copy-fit"
+  # appversion and footer.text are set at deploy time by the workflow, from the
+  # latest GitHub release and the commit being built. Leave them out of this
+  # file: an entry here would go stale, and the environment overrides it anyway.
   defaultTheme = "auto"
   ShowShareButtons = false
   ShowReadingTime = false

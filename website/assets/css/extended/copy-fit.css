@@ -1,0 +1,11 @@
+/* Bundled into the stylesheet automatically by PaperMod. */
+.latest-release {
+    margin-top: 16px;
+    font-size: 14px;
+    color: var(--secondary);
+}
+
+.latest-release a {
+    color: inherit;
+    border-bottom: 1px solid var(--border);
+}
