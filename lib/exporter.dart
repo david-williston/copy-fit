@@ -127,6 +127,7 @@ class Exporter {
     required this.start,
     required this.end,
     required this.format,
+    this.rolling = false,
     this.includeSources = true,
   });
 
@@ -135,6 +136,10 @@ class Exporter {
   final DateTime start;
   final DateTime end;
   final ExportFormat format;
+
+  /// True when [start]..[end] rolls back from now rather than covering whole
+  /// calendar days, so the first and last day in the output may be partial.
+  final bool rolling;
 
   /// Whether each value carries the app that recorded it (Fitbit, Samsung...).
   /// Useful context for a coach, but it roughly doubles raw-point size.
@@ -155,7 +160,14 @@ class Exporter {
         'generated_at': isoLocal(DateTime.now()),
         'timezone': DateTime.now().timeZoneName,
         'utc_offset_minutes': DateTime.now().timeZoneOffset.inMinutes,
-        'range': {'start': isoDate(start), 'end': isoDate(end)},
+        // A rolling window starts mid-day, so dates alone would misstate it.
+        'range': rolling
+            ? {
+                'from': isoLocal(start),
+                'to': isoLocal(end),
+                'hours': end.difference(start).inHours,
+              }
+            : {'start': isoDate(start), 'end': isoDate(end)},
         'format': format == ExportFormat.dailySummary ? 'daily_summary' : 'raw_points',
         if (format == ExportFormat.dailySummary)
           'notes': [
@@ -174,6 +186,11 @@ class Exporter {
             'sleep.unassigned_stages holds stage time that belonged to no session; '
                 'it is excluded from asleep_min and is usually a source quirk.',
             'Units are given per metric in the "units" object.',
+            if (rolling)
+              'This is a rolling window, not whole days. The first and last '
+                  'days may be partial, so their totals can understate a full '
+                  'day. Sleep is unaffected: a session is included whole or not '
+                  'at all.',
           ],
       },
       ...body,

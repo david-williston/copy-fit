@@ -10,8 +10,20 @@ Android only. Sideload only. Not built for the Play Store.
 ## What it does
 
 1. Asks Health Connect for read access to the metrics you pick.
-2. Reads back the range you choose (7 days to 1 year).
+2. Reads back the range you choose (24 hours to 1 year).
 3. Formats the result as JSON and copies it to the clipboard.
+
+**The default range is the last 24 hours**, for a daily check-in: exported in
+the morning it returns last night's sleep and nothing older, so each day's
+paste to a coach adds only what is new.
+
+That one range is **rolling** — it counts back 24 hours from the moment you
+export. Every other range covers **whole calendar days** ending tonight, so "3
+days" is midnight two days ago through the end of today. The difference matters
+for cumulative metrics: a rolling window starts mid-day, so its first day's step
+count is partial. The export says so in its `notes` and reports the window's
+exact `from` and `to` rather than dates. Sleep is unaffected either way — a
+session comes back whole or not at all.
 
 **Sleep is the only metric selected by default.** Everything else — steps,
 heart rate, workouts, body measurements, vitals, intake — is there but opt-in,
@@ -108,6 +120,14 @@ Needs Flutter and an Android SDK. `flutter doctor` should be clean.
 ```sh
 flutter pub get
 flutter test
+```
+
+One test checks that calendar windows start at midnight across a
+daylight-saving change. On a machine whose timezone never changes its clocks it
+passes trivially, so to exercise it for real:
+
+```sh
+TZ=America/Denver flutter test test/export_range_test.dart
 ```
 
 Day to day, run it from VS Code: press F5 with the phone attached. The Dart
@@ -232,11 +252,13 @@ what makes the exporter testable without a device.
 | Path | What it is |
 | --- | --- |
 | `lib/metrics.dart` | The catalog of exportable metrics and how each aggregates |
+| `lib/export_range.dart` | The selectable windows, rolling or calendar, and their query bounds |
 | `lib/health_service.dart` | The only file that imports `health`: permissions, reads, diagnostics |
 | `lib/exporter.dart` | Pure transformation of Health Connect points into the JSON document |
 | `lib/home_page.dart` | The single-screen UI |
 | `lib/main.dart` | App entry and theme |
 | `test/exporter_test.dart` | Aggregation rules — the part worth testing |
+| `test/export_range_test.dart` | Window bounds, including across a daylight-saving change |
 | `test/widget_test.dart` | Boot, permission-warning states, settings persistence |
 
 ### The catalog is data

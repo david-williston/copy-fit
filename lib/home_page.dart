@@ -4,6 +4,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'export_range.dart';
 import 'exporter.dart';
 import 'health_service.dart';
 import 'metrics.dart';
@@ -19,7 +20,9 @@ class _HomePageState extends State<HomePage> {
   // Bumped when the default selection changes, so a saved set from an older
   // build does not mask the new default.
   static const _prefMetrics = 'metrics.v2';
-  static const _prefDays = 'days';
+  static const _prefRange = 'range';
+  // Older builds stored the range as a plain day count under this key.
+  static const _prefLegacyDays = 'days';
   static const _prefFormat = 'format';
   static const _prefSources = 'sources';
 
@@ -27,7 +30,7 @@ class _HomePageState extends State<HomePage> {
 
   ConnectState _connect = ConnectState.checking;
   Set<String> _selected = {...kDefaultMetricKeys};
-  int _days = 30;
+  ExportRange _range = ExportRange.last24Hours;
   ExportFormat _format = ExportFormat.dailySummary;
   bool _includeSources = true;
   bool _historyGranted = false;
@@ -69,7 +72,14 @@ class _HomePageState extends State<HomePage> {
         // Drop keys from an older build that no longer exist.
         _selected = saved.where((k) => kMetrics.any((m) => m.key == k)).toSet();
       }
-      _days = prefs.getInt(_prefDays) ?? _days;
+      final savedRange = prefs.getString(_prefRange);
+      final legacyDays = prefs.getInt(_prefLegacyDays);
+      _range = ExportRange.values.firstWhere(
+        (r) => r.name == savedRange,
+        orElse: () =>
+            (legacyDays == null ? null : ExportRange.fromLegacyDays(legacyDays)) ??
+            _range,
+      );
       _includeSources = prefs.getBool(_prefSources) ?? _includeSources;
       final fmt = prefs.getString(_prefFormat);
       if (fmt != null) {
@@ -84,7 +94,8 @@ class _HomePageState extends State<HomePage> {
   Future<void> _save() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setStringList(_prefMetrics, _selected.toList());
-    await prefs.setInt(_prefDays, _days);
+    await prefs.setString(_prefRange, _range.name);
+    await prefs.remove(_prefLegacyDays);
     await prefs.setString(_prefFormat, _format.name);
     await prefs.setBool(_prefSources, _includeSources);
   }
@@ -132,7 +143,7 @@ class _HomePageState extends State<HomePage> {
     try {
       final outcome = await _service.ensurePermissions(
         metrics,
-        needHistory: _days > 30,
+        needHistory: _range.needsHistory,
       );
       _historyGranted = outcome.historyGranted;
 
@@ -145,19 +156,13 @@ class _HomePageState extends State<HomePage> {
         return;
       }
 
-      // Whole local days: midnight at the start of the window through now.
-      final now = DateTime.now();
-      final endOfToday = DateTime(now.year, now.month, now.day)
-          .add(const Duration(days: 1))
-          .subtract(const Duration(microseconds: 1));
-      final start = DateTime(now.year, now.month, now.day)
-          .subtract(Duration(days: _days - 1));
+      final (:start, :end) = _range.window(DateTime.now());
 
       _lastStart = start;
       final report = await _service.read(
         metrics: metrics,
         start: start,
-        end: endOfToday,
+        end: end,
         onProgress: (label) {
           if (mounted) setState(() => _busyLabel = 'Reading $label');
         },
@@ -172,7 +177,8 @@ class _HomePageState extends State<HomePage> {
         points: report.points,
         metrics: metrics,
         start: start,
-        end: endOfToday,
+        end: end,
+        rolling: _range.isRolling,
         format: _format,
         includeSources: _includeSources,
       ).build();
@@ -254,7 +260,7 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 16),
             _sectionLabel('Range'),
             _rangePicker(),
-            if (_days > 30 && !_historyGranted) ...[
+            if (_range.needsHistory && !_historyGranted) ...[
               const SizedBox(height: 8),
               _hint(
                 'Ranges past 30 days need the "historical data" permission. '
@@ -370,16 +376,15 @@ class _HomePageState extends State<HomePage> {
       );
 
   Widget _rangePicker() {
-    const options = {7: '7 days', 14: '14 days', 30: '30 days', 90: '90 days', 365: '1 year'};
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        for (final e in options.entries)
+        for (final r in ExportRange.values)
           ChoiceChip(
-            label: Text(e.value),
-            selected: _days == e.key,
-            onSelected: (_) => _updateSetting(() => _days = e.key),
+            label: Text(r.label),
+            selected: _range == r,
+            onSelected: (_) => _updateSetting(() => _range = r),
           ),
       ],
     );

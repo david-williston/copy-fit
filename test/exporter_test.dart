@@ -347,6 +347,36 @@ void main() {
     expect(doc.containsKey('days'), isFalse);
   });
 
+  test('a rolling window reports its exact span and warns about partial days', () {
+    final from = DateTime(2026, 9, 19, 8, 15);
+    final to = DateTime(2026, 9, 20, 8, 15);
+    final doc = jsonDecode(Exporter(
+      points: [point(HealthDataType.STEPS, HealthDataUnit.COUNT, 10, DateTime(2026, 9, 19, 9))],
+      metrics: [steps],
+      start: from,
+      end: to,
+      format: ExportFormat.dailySummary,
+      rolling: true,
+    ).build().json) as Map<String, dynamic>;
+
+    final range = doc['export']['range'] as Map<String, dynamic>;
+    expect(range['from'], startsWith('2026-09-19T08:15:00'));
+    expect(range['to'], startsWith('2026-09-20T08:15:00'));
+    expect(range['hours'], 24);
+    expect(range.containsKey('start'), isFalse,
+        reason: 'dates alone would misstate a window that starts mid-day');
+    expect((doc['export']['notes'] as List).join(' '), contains('rolling window'));
+  });
+
+  test('a calendar window reports dates and no partial-day warning', () {
+    final doc = run([
+      point(HealthDataType.STEPS, HealthDataUnit.COUNT, 10, DateTime(2026, 9, 19, 9)),
+    ], [steps]);
+    final range = doc['export']['range'] as Map<String, dynamic>;
+    expect(range, {'start': '2026-09-18', 'end': '2026-09-20'});
+    expect((doc['export']['notes'] as List).join(' '), isNot(contains('rolling window')));
+  });
+
   test('timestamps are local ISO 8601 with an offset', () {
     final doc = run([
       point(HealthDataType.STEPS, HealthDataUnit.COUNT, 5, DateTime(2026, 9, 19, 10, 30, 15)),

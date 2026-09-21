@@ -1,4 +1,5 @@
 import 'package:copy_fit/main.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -49,7 +50,8 @@ void main() {
     expect(find.text('1.1.1'), findsOneWidget,
         reason: 'the version is shown beside the title');
     expect(find.text('Health Connect is ready.'), findsOneWidget);
-    expect(find.text('30 days'), findsOneWidget);
+    expect(selectedRange(tester), '24 hours',
+        reason: 'a daily check-in only needs the last day');
     expect(find.text('Daily summary'), findsOneWidget);
 
     // The action button sits below the fold on a phone-sized screen.
@@ -77,7 +79,7 @@ void main() {
     await tester.pumpAndSettle();
 
     final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getInt('days'), 14,
+    expect(prefs.getString('range'), 'last14Days',
         reason: 'the range is written as soon as it changes');
 
     await tester.tap(find.text('Raw points'));
@@ -87,6 +89,24 @@ void main() {
     await tester.tap(find.text('Steps'));
     await tester.pumpAndSettle();
     expect(prefs.getStringList('metrics.v2'), contains('steps'));
+  });
+
+  testWidgets('a range saved by an older build is carried over', (tester) async {
+    // Builds up to 1.1.1 stored the range as a plain day count.
+    SharedPreferences.setMockInitialValues({'days': 90});
+
+    await tester.pumpWidget(const CopyFitApp());
+    await tester.pump(const Duration(seconds: 6));
+    await tester.pumpAndSettle();
+
+    expect(selectedRange(tester), '90 days');
+
+    await tester.tap(find.text('3 days'));
+    await tester.pumpAndSettle();
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('range'), 'last3Days');
+    expect(prefs.containsKey('days'), isFalse,
+        reason: 'the legacy key is dropped once the new one is written');
   });
 
   testWidgets('no warning once historical access is already granted', (tester) async {
@@ -103,4 +123,12 @@ void main() {
     // until the first read.
     expect(find.textContaining('historical data'), findsNothing);
   });
+}
+
+/// The label of the range chip that is currently selected.
+String selectedRange(WidgetTester tester) {
+  final chips = tester.widgetList<ChoiceChip>(find.byType(ChoiceChip));
+  final selected = chips.where((c) => c.selected).toList();
+  expect(selected, hasLength(1), reason: 'exactly one range is selected');
+  return (selected.single.label as Text).data!;
 }
