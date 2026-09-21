@@ -1,0 +1,57 @@
+name: Deploy website
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "website/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let an in-progress deployment finish rather than cancelling it midway.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive   # PaperMod is a submodule
+
+      - name: Set up Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: "0.163.1"   # matches local, so CI builds what you previewed
+          extended: true
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v6
+
+      # Take the base URL from Pages rather than hugo.toml, so a custom domain
+      # added later needs no config change.
+      - name: Build
+        run: hugo --source website --minify --baseURL "${{ steps.pages.outputs.base_url }}/"
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: website/public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5

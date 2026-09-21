@@ -1,0 +1,62 @@
+# The site publishes under /copy-fit/, not the domain root, so every internal
+# path here is relative. A leading slash resolves against the domain and 404s
+# once deployed, even though it works under `hugo server`.
+baseURL = "https://david-williston.github.io/copy-fit/"
+locale = "en-ca"
+title = "Copy Fit"
+theme = "PaperMod"
+enableRobotsTXT = true
+# A landing page has no posts, so tag and category listings would be empty.
+disableKinds = ["taxonomy", "term"]
+
+[params]
+  description = "Copy your Android health data as JSON, ready to paste into an AI coach."
+  defaultTheme = "auto"
+  ShowShareButtons = false
+  ShowReadingTime = false
+  ShowPostNavLinks = false
+  ShowBreadCrumbs = false
+  ShowCodeCopyButtons = true
+  # Favicons use PaperMod's defaults (favicon.ico and friends, in static/),
+  # which it resolves through absURL. Setting them here with a leading slash
+  # would break them under the subpath.
+
+  [params.profileMode]
+    enabled = true
+    title = "Copy Fit"
+    subtitle = "Your Android health data, copied as JSON and ready to paste into an AI coach."
+    imageUrl = "logo.png"
+    imageWidth = 128
+    imageHeight = 128
+    imageTitle = "Copy Fit"
+
+    # PaperMod writes button URLs verbatim, without absURL, so these must be
+    # relative (resolved from the home page) or fully absolute.
+    [[params.profileMode.buttons]]
+      name = "Download"
+      url = "https://github.com/david-williston/copy-fit/releases/latest"
+    [[params.profileMode.buttons]]
+      name = "How it works"
+      url = "how-it-works/"
+    [[params.profileMode.buttons]]
+      name = "Install"
+      url = "install/"
+
+  [[params.socialIcons]]
+    name = "github"
+    url = "https://github.com/david-williston/copy-fit"
+
+# pageRef resolves to each page's permalink, so the subpath is handled for us.
+[menu]
+  [[menu.main]]
+    name = "How it works"
+    pageRef = "/how-it-works"
+    weight = 10
+  [[menu.main]]
+    name = "Install"
+    pageRef = "/install"
+    weight = 20
+  [[menu.main]]
+    name = "Privacy"
+    pageRef = "/privacy"
+    weight = 30

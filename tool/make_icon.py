@@ -1,4 +1,4 @@
-"""Generate the Copy Fit launcher icon and README logo.
+"""Generate the Copy Fit launcher icon, README logo and website images.
 
 Run from anywhere; paths resolve relative to the repository:
 
@@ -6,7 +6,8 @@ Run from anywhere; paths resolve relative to the repository:
 
 Needs Pillow (`pip install Pillow`). Writes every density of the adaptive-icon
 foreground and the legacy launcher icon into android/app/src/main/res, plus
-docs/logo.png. The adaptive background is not generated here: it is
+docs/logo.png, and the website's logo and favicons into website/static. The
+adaptive background is not generated here: it is
 drawable/ic_launcher_background.xml, whose two colours must match BLUE_HI and
 BLUE_LO below.
 
@@ -24,6 +25,7 @@ from PIL import Image, ImageDraw
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RES = os.path.join(ROOT, "android", "app", "src", "main", "res")
+SITE = os.path.join(ROOT, "website", "static")
 
 SS = 4                      # supersample factor
 D = 1000                    # design space
@@ -111,6 +113,16 @@ def main():
         full(px, rounded=True).save(os.path.join(RES, f"mipmap-{name}", "ic_launcher.png"))
 
     full(512, rounded=True).save(os.path.join(ROOT, "docs", "logo.png"))
+
+    # Website: the profile logo, and the favicon names PaperMod looks for.
+    os.makedirs(SITE, exist_ok=True)
+    full(512, rounded=True).save(os.path.join(SITE, "logo.png"))
+    full(16, rounded=True).save(os.path.join(SITE, "favicon-16x16.png"))
+    full(32, rounded=True).save(os.path.join(SITE, "favicon-32x32.png"))
+    full(256, rounded=True).save(os.path.join(SITE, "favicon.ico"),
+                                 sizes=[(16, 16), (32, 32), (48, 48)])
+    # iOS applies its own corner mask, so this one stays square.
+    full(180, rounded=False).save(os.path.join(SITE, "apple-touch-icon.png"))
 
     reach = reach_dp(foreground(432))
     print(f"mark reaches {reach:.1f}dp from centre (safe zone: {SAFE_RADIUS_DP}dp)")

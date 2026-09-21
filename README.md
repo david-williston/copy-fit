@@ -7,6 +7,8 @@ puts it on the clipboard as JSON, so you can paste it into ChatGPT for coaching.
 
 Android only. Sideload only. Not built for the Play Store.
 
+**Website:** https://david-williston.github.io/copy-fit/
+
 ## What it does
 
 1. Asks Health Connect for read access to the metrics you pick.
@@ -164,6 +166,37 @@ install over the old one and you will have to uninstall first. If that becomes
 annoying, create a real keystore and wire it into
 `android/app/build.gradle.kts`.
 
+## Website
+
+The landing page lives in `website/`, built with [Hugo](https://gohugo.io) and
+the [PaperMod](https://github.com/adityatelange/hugo-PaperMod) theme. A GitHub
+Actions workflow (`.github/workflows/pages.yml`) builds and publishes it to
+GitHub Pages whenever anything under `website/` changes on `main`. Only the Hugo
+source is committed; the generated HTML never is.
+
+PaperMod is a git submodule, so a plain clone leaves its folder empty and the
+site will not build. Clone with submodules, or fetch them afterwards:
+
+```sh
+git clone --recurse-submodules https://github.com/david-williston/copy-fit.git
+git submodule update --init          # in an existing clone
+```
+
+To preview locally:
+
+```sh
+hugo server --source website
+```
+
+The site publishes under `/copy-fit/`, not the domain root, so internal links
+must be relative. A path with a leading slash works under `hugo server` and
+404s once deployed. PaperMod's profile buttons in particular use their URL
+verbatim, and favicons resolve correctly only while they keep PaperMod's default
+bare filenames.
+
+The logo and favicons in `website/static/` come from `tool/make_icon.py`, the
+same script as the app icon, so regenerating the icon updates the site too.
+
 ## Where settings live
 
 Range, format, the recording-app toggle and the metric selection are stored with
@@ -257,6 +290,8 @@ what makes the exporter testable without a device.
 | `lib/exporter.dart` | Pure transformation of Health Connect points into the JSON document |
 | `lib/home_page.dart` | The single-screen UI |
 | `lib/main.dart` | App entry and theme |
+| `tool/make_icon.py` | Generates the launcher icon, README logo and website images |
+| `website/` | The Hugo landing page, deployed by `.github/workflows/pages.yml` |
 | `test/exporter_test.dart` | Aggregation rules — the part worth testing |
 | `test/export_range_test.dart` | Window bounds, including across a daylight-saving change |
 | `test/widget_test.dart` | Boot, permission-warning states, settings persistence |
